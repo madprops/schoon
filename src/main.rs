@@ -1,4 +1,4 @@
-pub const VERSION: &str = "v1.0.0";
+pub const VERSION: &str = "v1.1.0";
 
 mod macros;
 mod args;
@@ -13,7 +13,16 @@ use crate::
     },
 };
 
-use std::fs;
+use std::
+{
+    fs::
+    {
+        self, File,
+    },
+    path::PathBuf,
+};
+
+use zip::ZipArchive;
 
 // Start of the program
 fn main() 
@@ -24,19 +33,47 @@ fn main()
 // Main operation
 fn schoon(args: Args)
 {
-    for file in fs::read_dir(args.template).unwrap()
-    {
-        let path1 = file.unwrap().path();
-        let path2 = args.target.join(path1.file_name().unwrap());
+    let mut files: Vec<(String, bool)> = vec![];
 
-        if path1.is_file() && path2.is_file()
+    if args.is_zip
+    {
+        // Get zip root files
+        let file = File::open(args.template).unwrap();
+        let mut zip = ZipArchive::new(file).unwrap();
+
+        for i in 0..zip.len()
         {
-            fs::remove_file(path2).unwrap();
+            let zfile = zip.by_index(i).unwrap();
+            files.push((s!(zfile.name()), zfile.is_dir()));
+        }
+    }
+
+    else
+    {
+        // Get dir root files
+        for dfile in fs::read_dir(args.template).unwrap()
+        {
+            let path = dfile.unwrap().path();
+            files.push((s!(path.file_name().unwrap().to_str().unwrap()), path.is_dir()));
+        }
+    }
+
+    let tdir = PathBuf::from(args.target);
+
+    for file in files
+    {
+        let tfile = tdir.join(file.0);
+
+        // Remove dir
+        if file.1 && tfile.is_dir()
+        {
+            fs::remove_dir_all(tfile).unwrap();
         }
 
-        else if path1.is_dir() && path2.is_dir()
+        // Or remove file
+        else if !file.1 && tfile.is_file()
         {
-            fs::remove_dir_all(path2).unwrap();
+            fs::remove_file(tfile).unwrap();
         }
     }
 }

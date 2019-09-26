@@ -32,41 +32,47 @@ pub fn check_args() -> Args
         .index(2))
     .get_matches();
 
-    let stemplate = match matches.value_of("template_path")
+    let template = match matches.value_of("template_path")
     {
         Some(path) => s!(path),
         None => s!()
     };
 
-    let starget = match matches.value_of("target_path")
+    let target = match matches.value_of("target_path")
     {
         Some(path) => s!(path),
         None => s!()
     };
 
-    if stemplate.is_empty() {exit2("Template not provided.")}
-    if starget.is_empty() {exit2("Target not provided.")}
-    if stemplate == starget {exit2("Template and Target are the same.")}
+    if template.is_empty() {exit2("Template not provided.")}
+    if target.is_empty() {exit2("Target not provided.")}
+    if template == target {exit2("Template and Target are the same.")}
 
-    let template = PathBuf::from(stemplate);
-    if !template.is_dir() {exit2("Template is not a directory.")};
-    let files = fs::read_dir(&template).unwrap();
-    if files.count() == 0 {exit2("Template directory is empty.")}
+    let is_zip = template.to_lowercase().ends_with(".zip");
 
-    let target = PathBuf::from(starget);
-    if !target.is_dir() {exit2("Target is not a directory.")};
-    let files = fs::read_dir(&target).unwrap();
+    if !is_zip
+    {
+        let dir = PathBuf::from(&template);
+        if !dir.is_dir() {exit2("Template is not a directory.")};
+        let files = fs::read_dir(&dir).unwrap();
+        if files.count() == 0 {exit2("Template directory is empty.")}
+    }
+
+    let dir = PathBuf::from(&target);
+    if !dir.is_dir() {exit2("Target is not a directory.")};
+    let files = fs::read_dir(&dir).unwrap();
     if files.count() == 0 {exit2("Target directory is empty.")}
 
     Args
     {
-        template, target,
+        template, target, is_zip,
     }
 }
 
 // Struct for arguments
 pub struct Args
 {
-    pub template: PathBuf,
-    pub target: PathBuf,
+    pub template: String,
+    pub target: String,
+    pub is_zip: bool,
 }
